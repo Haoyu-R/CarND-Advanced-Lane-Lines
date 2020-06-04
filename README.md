@@ -1,5 +1,5 @@
 ## Advanced Lane Finding
-
+![Lanes Image](./examples/example_output.jpg)
 In this project, your goal is to write a software pipeline to identify the lane boundaries in a video, but the main output or product we want you to create is a detailed writeup of the project.  Check out the [writeup template](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup.  
 
 Creating a great writeup:
@@ -32,7 +32,7 @@ The `challenge_video.mp4` video is an extra (and optional) challenge for you if 
 
 If you're feeling ambitious (again, totally optional though), don't stop there!  We encourage you to go out and take video of your own, calibrate your camera and show us how you would implement this project from scratch!
 
-## How to write a README
+## Rubric Report
 
 1.  Have the camera matrix and distortion coefficients been computed correctly and checked on one of the calibration images as a test?
     * Function camera_calibration(path, rows, columns) in process_utils.py
@@ -78,7 +78,7 @@ If you're feeling ambitious (again, totally optional though), don't stop there! 
 
 7. Does the pipeline established with the test images work to process the video?
     
-    Yes, please refer to the generated video project_video_test.mps in main folder. (Note that the pipeline fails on challenge and harder_challenge video)
+    Yes, please refer to the generated video [project_video_test.mps](https://github.com/Haoyu-R/CarND-Advanced-Lane-Lines/blob/master/challenge_video_test.mp4) in main folder. (Note that the pipeline fails on challenge and harder_challenge video)
     
 8. Discussion
     
