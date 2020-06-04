@@ -73,7 +73,7 @@ def new_line_search(binary_warped):
     # Choose the number of sliding windows
     nwindows = 9
     # Set the width of the windows +/- margin
-    margin = 100
+    margin = 75
     # Set minimum number of pixels found to recenter window
     minpix = 50
     # Set height of windows - based on nwindows above and image shape
@@ -165,7 +165,7 @@ def new_line_search(binary_warped):
 
 
 def line_search(binary_warped, left_fit, right_fit):
-    margin = 100
+    margin = 75
 
     # Grab activated pixels
     nonzero = binary_warped.nonzero()
@@ -205,7 +205,7 @@ def draw_line_area(color_warp, left_fit, right_fit):
     right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
 
     left_negative = np.argwhere(left_fitx < 0)
-    right_positive = np.argwhere(right_fitx > color_warp.shape[1])
+    right_positive = np.argwhere(right_fitx > color_warp.shape[1] - 23)
     if len(left_negative) > 25:
         idx = np.max(left_negative)
         left_fitx = left_fitx[idx:]
@@ -259,10 +259,12 @@ def measure_center_diviation(x_max, y_max, left_fit, right_fit):
     return (x_max - (x_left_bottom+x_right_bottom))/2 * xm_per_pix
 
 
-def write_text(img, curvature, deviation):
+def write_text(img, curvature, deviation, left_fit, right_fit):
     # Write some Text
     string1 = "Radius of Curvature = {:.1f}(m)".format(curvature)
     string2 = ""
+    # string3 = "A: {:.8f}, {:.8f}".format(left_fit[0], right_fit[0])
+    # string4 = "B: {:.8f}, {:.8f}".format(left_fit[1], right_fit[1])
 
     if deviation < 0:
         string2 = "Vehicle is {:.2f}m left of center".format(abs(deviation))
@@ -271,6 +273,8 @@ def write_text(img, curvature, deviation):
 
     bottomLeftCornerOfText1 = (10, 50)
     bottomLeftCornerOfText2 = (10, 100)
+    # bottomLeftCornerOfText3 = (10, 150)
+    # bottomLeftCornerOfText4 = (10, 200)
 
     font = cv2.FONT_HERSHEY_SIMPLEX
     fontScale = 1
@@ -291,6 +295,18 @@ def write_text(img, curvature, deviation):
                 fontColor,
                 lineType)
 
+    # cv2.putText(img, string3,
+    #             bottomLeftCornerOfText3,
+    #             font,
+    #             fontScale,
+    #             fontColor,
+    #             lineType)
+    # cv2.putText(img, string4,
+    #             bottomLeftCornerOfText4,
+    #             font,
+    #             fontScale,
+    #             fontColor,
+    #             lineType)
     return img
 
 
@@ -320,6 +336,11 @@ def mask_color(img):
     return masked_color
 
 
+def measure_top_distance(left_fit, right_fit):
+    xm_per_pix = 3.7 / 900
+    return abs(left_fit[2] - right_fit[2]) * xm_per_pix
+
+
 def lane_detection_pipline(img, mtx, dist, M, invM, line):
     # some hyperparameters
     s_threshold = (170, 255)
@@ -334,20 +355,40 @@ def lane_detection_pipline(img, mtx, dist, M, invM, line):
 
     if not line.detected:
         left_fit, right_fit = new_line_search(warped_img)
-        if np.sum(left_fit) == 0:
+        if np.sum(left_fit) == 0 or np.sum(right_fit) == 0:
             return undist
-        line.detected = True
         line.insert(left_fit, right_fit)
     else:
-        left_fit, right_fit = line_search(warped_img, line.current_left, line.current_right)
-        if np.sum(left_fit) == 0:
-            line.detected = False
-            return undist
+        left_fit, right_fit = line_search(warped_img, line.last_left, line.last_right)
+        if np.sum(left_fit) == 0 or np.sum(right_fit) == 0:
+            left_fit, right_fit = new_line_search(warped_img)
+            if np.sum(left_fit) == 0 or np.sum(right_fit) == 0:
+                line.reset()
+                return undist
         line.insert(left_fit, right_fit)
 
     left_fit, right_fit = line.get_coefficient()
     left_curvature, right_curvature = measure_curvature_real(img.shape[0], left_fit, right_fit)
     deviation = measure_center_diviation(img.shape[1], img.shape[0], left_fit, right_fit)
+
+    if abs(deviation) > 1 or measure_top_distance(left_fit, right_fit) < 2.5 or abs(left_fit[1] - right_fit[1]) > 2.5:
+        if line.detected:
+            line.pop_last()
+            left_fit, right_fit = line.get_coefficient()
+            left_curvature, right_curvature = measure_curvature_real(img.shape[0], left_fit, right_fit)
+            deviation = measure_center_diviation(img.shape[1], img.shape[0], left_fit, right_fit)
+            if abs(deviation) > 1 or measure_top_distance(left_fit, right_fit) < 2.5 or abs(
+                left_fit[1] - right_fit[1]) > 2.5:
+                left_fit, right_fit = new_line_search(warped_img)
+                if np.sum(left_fit) == 0 or np.sum(right_fit) == 0:
+                    line.reset()
+                    return undist
+                line.insert(left_fit, right_fit)
+                left_fit, right_fit = line.get_coefficient()
+                left_curvature, right_curvature = measure_curvature_real(img.shape[0], left_fit, right_fit)
+                deviation = measure_center_diviation(img.shape[1], img.shape[0], left_fit, right_fit)
+
+    line.detected = True
 
     # print(left_curvature, right_curvature, deviation)
 
@@ -361,19 +402,20 @@ def lane_detection_pipline(img, mtx, dist, M, invM, line):
     newwarp = cv2.warpPerspective(line_warp, invM, img_size)
     result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
 
-    result = write_text(result, (left_curvature+right_curvature)/2, deviation)
+    result = write_text(result, (left_curvature+right_curvature)/2, deviation, left_fit, right_fit)
 
-    if abs(left_curvature - right_curvature) > 600 or abs(deviation) > 1 or (line.current_right[0] > 0 and line.current_left[0] < 0) or (line.current_left[0] > 0 and line.current_right[0] < 0):
-        line.reset()
-        line.detected = False
+    resize_warped = cv2.resize(line_warp, (160, 90), interpolation=cv2.INTER_AREA)
+    # rgb_warped = cv2.cvtColor(resize_warped, cv2.COLOR_GRAY2BGR)
 
-    plt.figure()
-    f, ax = plt.subplots(1, 2)
-    ax[0].imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    result[0:90, result.shape[1]- 160: result.shape[1], :] = resize_warped
+
+    # plt.figure()
+    # f, ax = plt.subplots(1, 2)
+    # ax[0].imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     # ax[0].imshow(cv2.cvtColor(undist, cv2.COLOR_BGR2RGB))
     # ax[0].imshow(thresh_binary_img)
     # ax[0].imshow(warped_img)
-    ax[1].imshow(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
-    plt.show()
+    # ax[1].imshow(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+    # plt.show()
 
     return result

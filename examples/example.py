@@ -43,17 +43,17 @@ def video_process(img):
 
 
 # Pipline software
-images = glob.glob(r'../test_images/*.jpg')
-
-for image in images:
-    line = Line()
-    img = cv2.imread(image)
-    processed_img = lane_detection_pipline(img, mtx, dist, M, invM, line)
-    processed_img = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
+# images = glob.glob(r'../test_images/*.jpg')
+#
+# for image in images:
+#     line = Line()
+#     img = cv2.imread(image)
+#     processed_img = lane_detection_pipline(img, mtx, dist, M, invM, line)
+#     processed_img = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
     # plt.imshow(processed_img)
     # plt.show()
 
 line = Line()
-# clip = VideoFileClip(r'../harder_challenge_video.mp4')
-# new_clip = clip.fl_image(video_process)
-# new_clip.write_videofile(r'../harder_challenge_video_test.mp4', audio=False)
+clip = VideoFileClip(r'../project_video.mp4')
+new_clip = clip.fl_image(video_process)
+new_clip.write_videofile(r'../project_video_test.mp4', audio=False)
