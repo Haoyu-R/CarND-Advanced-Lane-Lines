@@ -83,7 +83,7 @@ If you're feeling ambitious (again, totally optional though), don't stop there! 
 8. Discussion
     
     * The pipeline fails on the challenge videos means that more robust filter algorithm are needed, for example, based different color. Also, the perspective matrix should be calculated on every frame not using some default points
-    * The curve should be considered using more advanced method
+    * The curve should be considered using more advanced method, especially sharp curve. Because the sharper the curve the more difficult to catch lane all the information using perspective transformation. Maybe there exit some deep learning methods for lane detection that can adapt for different situations.
     * Other information like map can be integrated into lane detection
 
 
